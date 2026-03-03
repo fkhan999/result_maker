@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Card Generator</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <!-- Base64 logos -->
+    <script src="assets/logo.js"></script>
+</head>
+
+<body class="flex items-center justify-center p-6 antialiased">
+    <!-- Login Modal -->
+    <div id="login-modal"
+        class="fixed inset-0 bg-slate-900/95 flex justify-center items-center z-[100] backdrop-blur-md">
+        <div
+            class="glass w-full max-w-sm rounded-3xl p-8 text-center relative overflow-hidden flex flex-col items-center border border-white/10 shadow-2xl">
+            <div
+                class="w-16 h-16 bg-indigo-500 rounded-full mix-blend-multiply filter blur-2xl opacity-50 absolute -top-4 -left-4">
+            </div>
+            <h2 class="text-3xl font-extrabold mb-2 tracking-tight text-white relative z-10">Portal Login</h2>
+            <p class="text-indigo-200 text-sm mb-6 relative z-10">Sign in to access your dashboard</p>
+            <form id="login-form" class="w-full space-y-4 relative z-10">
+                <div>
+                    <input type="text" id="login_username" required placeholder="Username (e.g. principle, class1)"
+                        class="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-center text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 transition">
+                </div>
+                <div>
+                    <input type="password" id="login_password" required placeholder="Password"
+                        class="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-center text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 transition">
+                </div>
+                <p id="login-error" class="text-red-400 text-sm hidden font-medium">Invalid username or password.</p>
+                <button type="submit"
+                    class="w-full glass-btn px-6 py-3 rounded-xl text-lg font-bold text-white shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] hover:shadow-[0_6px_20px_rgba(99,102,241,0.5)] mt-4">
+                    Sign In
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- User Menu (Top Right) -->
+    <div id="user-menu"
+        class="hidden fixed top-4 right-4 flex items-center space-x-4 bg-black/40 px-5 py-2 rounded-xl backdrop-blur-md border border-white/10 z-50 shadow-xl">
+        <div class="text-right">
+            <p id="logged-in-user" class="text-white font-bold text-sm leading-tight">User</p>
+            <p id="logged-in-role" class="text-indigo-300 text-xs font-semibold leading-tight">Role</p>
+        </div>
+        <button id="logout-btn"
+            class="text-red-400 hover:text-red-300 transition text-sm font-bold border-l border-white/20 pl-4 py-1 cursor-pointer">
+            Logout
+        </button>
+    </div>
+
+
+    <div
+        class="glass w-full max-w-5xl rounded-3xl p-8 mt-2 text-center relative overflow-hidden flex flex-col items-center">
+        <!-- Glow effects decorators -->
+        <div
+            class="absolute -top-32 -left-32 w-64 h-64 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animation-blob">
+        </div>
+        <div class="absolute -bottom-32 -right-32 w-64 h-64 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animation-blob"
+            style="animation-delay: 2s;"></div>
+
+        <div class="relative z-10 w-full flex flex-col">
+            <h1
+                class="text-4xl font-extrabold mb-8 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-400 to-indigo-400 text-center">
+                School Report Cards AI
+            </h1>
+
+            <!-- Tabs -->
+            <div class="flex space-x-6 mb-6 border-b border-white/20 pb-2 justify-center">
+                <button id="tab-add"
+                    class="text-xl font-bold text-indigo-400 border-b-2 border-indigo-400 px-4 py-2 hover:text-white transition cursor-pointer">Add
+                    Student</button>
+                <button id="tab-list"
+                    class="text-xl font-bold text-gray-400 px-4 py-2 hover:text-white transition cursor-pointer">Saved
+                    Students (<span id="student-count-badge">0</span>)</button>
+                <button id="tab-settings"
+                    class="text-xl font-bold text-gray-400 px-4 py-2 hover:text-white transition cursor-pointer">Teacher
+                    Portal</button>
+            </div>
+
+            <!-- Tab Content: Add -->
+            <div id="content-add" class="w-full text-left">
+                <form id="student-form" class="space-y-6">
+                    <input type="hidden" id="student_id" value="">
+                    <h3 class="text-2xl font-semibold mb-4 text-white">Student Details</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                        <input type="text" id="student_name" required placeholder="Student Name"
+                            class="bg-black/30 border border-white/10 rounded-xl p-3 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 transition">
+                        <select id="student_class" required
+                            class="bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-indigo-500 transition appearance-none">
+                            <!-- Populated from settings -->
+                        </select>
+                        <input type="text" id="fathers_name" required placeholder="Father's Name"
+                            class="bg-black/30 border border-white/10 rounded-xl p-3 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 transition">
+                        <input type="text" id="mother_name" required placeholder="Mother's Name"
+                            class="bg-black/30 border border-white/10 rounded-xl p-3 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 transition">
+                        <input type="text" id="dob" required placeholder="DOB"
+                            class="bg-black/30 border border-white/10 rounded-xl p-3 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 transition">
+                        <input type="text" id="pen_number" required placeholder="PEN Number"
+                            class="bg-black/30 border border-white/10 rounded-xl p-3 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 transition">
+                        <input type="text" id="sr_number" required placeholder="SR Number"
+                            class="bg-black/30 border border-white/10 rounded-xl p-3 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 transition">
+                    </div>
+
+                    <h3 class="text-2xl font-semibold mt-8 mb-4 text-white">Subject Marks</h3>
+                    <div class="overflow-x-auto rounded-xl border border-white/10 bg-black/30 p-1">
+                        <table class="w-full text-left border-collapse min-w-max">
+                            <thead>
+                                <tr class="border-b border-white/20 text-indigo-300">
+                                    <th class="p-3">Subject</th>
+                                    <th class="p-3 w-28 text-center">FT (10)</th>
+                                    <th class="p-3 w-28 text-center">HY (30)</th>
+                                    <th class="p-3 w-28 text-center">ST (10)</th>
+                                    <th class="p-3 w-28 text-center">Annual (50)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="marks-body">
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="flex justify-end pt-4">
+                        <button type="submit" id="save-student-btn"
+                            class="glass-btn px-10 py-4 rounded-xl text-lg font-bold text-white shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] hover:shadow-[0_6px_20px_rgba(99,102,241,0.5)]">
+                            Save Student to Database
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Tab Content: List -->
+            <div id="content-list" class="hidden w-full text-left">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                    <h3 class="text-2xl font-semibold text-white">Student Database</h3>
+                    <div class="flex gap-3">
+                        <button id="generate-single-btn"
+                            class="glass-btn px-5 py-3 rounded-xl text-white font-bold shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+                                </path>
+                            </svg>
+                            Single PDF
+                        </button>
+                        <button id="generate-all-btn"
+                            class="glass-btn px-5 py-3 rounded-xl text-white font-bold shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4">
+                                </path>
+                            </svg>
+                            ZIP (Separate)
+                        </button>
+                    </div>
+                </div>
+
+                <div id="class-filter-container"
+                    class="mb-6 flex items-center gap-4 bg-black/40 rounded-xl p-4 border border-white/10 hidden">
+                    <label for="list_class_filter" class="text-white font-medium">Filter by Class:</label>
+                    <select id="list_class_filter"
+                        class="bg-black/30 border border-white/10 rounded-xl p-2 text-white focus:outline-none focus:border-indigo-500 transition appearance-none min-w-[200px]">
+                        <option value="">All Classes</option>
+                    </select>
+                </div>
+
+                <div id="progress-area" class="w-full hidden mb-6 bg-black/40 rounded-xl p-4 border border-white/10">
+                    <div class="flex justify-between text-sm mb-2 text-indigo-100 font-medium">
+                        <span id="progress-text" class="animate-pulse">Generating PDFs...</span>
+                        <span id="progress-pct">0%</span>
+                    </div>
+                    <div
+                        class="w-full bg-gray-800/60 rounded-full h-3 overflow-hidden border border-white/10 shadow-inner">
+                        <div id="progress-bar"
+                            class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-3 rounded-full transition-all duration-300"
+                            style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto rounded-xl border border-white/10 bg-black/30">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-white/20 text-indigo-300">
+                                <th class="p-4">Student Name</th>
+                                <th class="p-4">Class</th>
+                                <th class="p-4">PEN Number</th>
+                                <th class="p-4">Total Marks</th>
+                                <th class="p-4">Grade</th>
+                                <th class="p-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="students-body" class="text-gray-100">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab Content: Settings -->
+            <div id="content-settings" class="w-full text-left hidden">
+                <form id="settings-form" class="space-y-6">
+                    <h3 class="text-2xl font-semibold mb-4 text-white">School Configuration</h3>
+
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-indigo-300 mb-2 font-semibold">School Name</label>
+                            <input type="text" id="setting_school_name" required
+                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-indigo-500 transition">
+                        </div>
+                        <div>
+                            <label class="block text-indigo-300 mb-2 font-semibold">Subtitle (UDISE, Block,
+                                District)</label>
+                            <input type="text" id="setting_subtitle" required
+                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-indigo-500 transition">
+                        </div>
+                        <div>
+                            <label class="block text-indigo-300 mb-2 font-semibold">Academic Session</label>
+                            <input type="text" id="setting_session" required placeholder="e.g., 2025-2026"
+                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-indigo-500 transition">
+                        </div>
+                        <div>
+                            <label class="block text-indigo-300 mb-2 font-semibold">Available Classes (comma
+                                separated)</label>
+                            <input type="text" id="setting_classes" required placeholder="1-A, 1-B, 2-A, 8-A"
+                                class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-indigo-500 transition">
+                        </div>
+                        <div>
+                            <label class="block text-indigo-300 mb-2 font-semibold">Class Subjects Mapping</label>
+                            <p class="text-xs text-gray-400 mb-4">Define standard subjects for 'default' and override
+                                them for specific classes using the inputs below. Press 'Enter' or click 'Add' to add a
+                                subject.</p>
+
+                            <div id="subjects_manager_container"
+                                class="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                <!-- Dynamically populated by app.js -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end pt-4 pb-6 border-b border-white/10">
+                        <button type="submit"
+                            class="glass-btn px-10 py-4 rounded-xl text-lg font-bold text-white shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] hover:shadow-[0_6px_20px_rgba(99,102,241,0.5)]">
+                            Save Settings
+                        </button>
+                    </div>
+                </form>
+
+                <!-- User Management Section (Only visible to principal) -->
+                <div id="user-management-section" class="mt-8">
+                    <h3 class="text-2xl font-semibold mb-4 text-white">Teacher Accounts</h3>
+                    <p class="text-xs text-gray-400 mb-6">Manage teacher logins and assign them directly to their
+                        specific classes. The password defaults to "password123" for new users.</p>
+
+                    <div class="bg-white/5 border border-white/10 rounded-xl overflow-hidden mb-6">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-black/40 text-indigo-300 border-b border-white/10">
+                                <tr>
+                                    <th class="p-4 font-semibold">Username</th>
+                                    <th class="p-4 font-semibold">Role</th>
+                                    <th class="p-4 font-semibold">Assigned Class</th>
+                                    <th class="p-4 font-semibold text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-body" class="text-gray-200 divide-y divide-white/10">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <form id="add-user-form"
+                        class="bg-black/30 p-5 rounded-xl border border-white/10 flex flex-col md:flex-row gap-4 items-end">
+                        <div class="flex-1 w-full">
+                            <label class="block text-indigo-300 text-sm mb-1 font-semibold">New Username</label>
+                            <input type="text" id="new_user_name" required placeholder="e.g. class9"
+                                class="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-white focus:outline-none focus:border-indigo-500 transition">
+                        </div>
+                        <div class="flex-1 w-full">
+                            <label class="block text-indigo-300 text-sm mb-1 font-semibold">Assign Class</label>
+                            <select id="new_user_class"
+                                class="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-white focus:outline-none focus:border-indigo-500 transition">
+                                <option value="">None</option>
+                            </select>
+                        </div>
+                        <button type="submit"
+                            class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-lg font-bold transition shadow-md w-full md:w-auto">
+                            + Add Teacher
+                        </button>
+                    </form>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden bucket for PDF generation -->
+    <div id="pdf-bucket"></div>
+
+    <script src="js/api.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>

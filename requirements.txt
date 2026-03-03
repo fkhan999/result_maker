@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+gunicorn
+sqlalchemy
+pydantic
+pandas
+openpyxl
+requests
+psycopg2-binary
+pyjwt
+python-dotenv

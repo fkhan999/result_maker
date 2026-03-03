@@ -1,0 +1,25 @@
+# Environment variables
+.env
+
+# Python compilation files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# PDF outputs
+*.pdf
+
+# System files
+.DS_Store
+.vscode/
+.idea/
+
+# Database files
+*.db
+*.sqlite3
