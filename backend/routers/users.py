@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from backend.database import get_db
 from backend.models import DBUser
-from backend.auth import get_current_user
+from backend.auth import get_current_user, get_password_hash
 from backend.schemas import UserSchema
 
 router = APIRouter(prefix="/api/users", tags=["users"])
@@ -31,7 +31,7 @@ def create_user(user_data: UserSchema, db: Session = Depends(get_db), current_us
     _require_principal(current_user)
     if db.query(DBUser).filter(DBUser.username == user_data.username).first():
         raise HTTPException(status_code=400, detail="Username already exists")
-    db.add(DBUser(username=user_data.username, password=user_data.password,
+    db.add(DBUser(username=user_data.username, password=get_password_hash(user_data.password),
                   role=user_data.role, assigned_class=user_data.assigned_class))
     db.commit()
     return {"status": "success"}
@@ -44,7 +44,7 @@ def update_user(user_id: int, user_data: UserSchema, db: Session = Depends(get_d
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
     db_user.username = user_data.username
-    db_user.password = user_data.password
+    db_user.password = get_password_hash(user_data.password)
     db_user.role = user_data.role
     db_user.assigned_class = user_data.assigned_class
     db.commit()

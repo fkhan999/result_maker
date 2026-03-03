@@ -4,6 +4,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 import jwt
+import bcrypt
 
 from backend.database import get_db
 from backend.models import DBUser
@@ -28,6 +29,14 @@ if not ACCESS_TOKEN_EXPIRE_DAYS:
     exit(1)
 
 security = HTTPBearer()
+
+
+def verify_password(plain_password, hashed_password):
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+
+
+def get_password_hash(password):
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 
 def create_token(username: str) -> str:

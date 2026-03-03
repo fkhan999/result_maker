@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 from backend.database import SessionLocal, Base, engine, get_db
 from backend.models import DBUser, DBClassSubject, DBSettings
 from backend.schemas import LoginSchema
-from backend.auth import create_token
+from backend.auth import create_token, verify_password, get_password_hash
+import os
 from backend.routers import students, settings, users, class_subjects
 
 # Create all tables
@@ -16,11 +17,14 @@ Base.metadata.create_all(bind=engine)
 
 def prepopulate(db: Session):
     if db.query(DBUser).count() == 0:
-        db.add(DBUser(username=os.getenv("ADMIN_USER"), password="password123", role="principal", assigned_class=None))
-        setting = db.query(DBSettings).first()
-        if setting and setting.classes:
-            for i, class_name in enumerate([c.strip() for c in setting.classes.split(',') if c.strip()]):
-                db.add(DBUser(username=f"class{i+1}", password="password123", role="teacher", assigned_class=class_name))
+        admin_user = os.getenv("ADMIN_USER", "principle")
+        admin_password = os.getenv("ADMIN_PASSWORD", "password123")
+        db.add(DBUser(
+            username=admin_user, 
+            password=get_password_hash(admin_password), 
+            role="principal", 
+            assigned_class=None
+        ))
 
     if db.query(DBClassSubject).count() == 0:
         default_subs = ["Hindi", "English", "Mathematics", "Science",
@@ -58,7 +62,7 @@ app.include_router(class_subjects.router)
 @app.post("/api/login")
 def login(login_data: LoginSchema, db: Session = Depends(get_db)):
     user = db.query(DBUser).filter(DBUser.username == login_data.username).first()
-    if not user or user.password != login_data.password:
+    if not user or not verify_password(login_data.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
     return {
         "success": True,
