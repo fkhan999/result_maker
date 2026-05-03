@@ -1,5 +1,5 @@
-# backend/models.py
-from sqlalchemy import Column, Integer, String, Float, Text
+from datetime import datetime
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime
 from backend.database import Base
 
 class PingTest(Base):
