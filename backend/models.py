@@ -2,6 +2,10 @@
 from sqlalchemy import Column, Integer, String, Float, Text
 from backend.database import Base
 
+class PingTest(Base):
+    __tablename__ = "ping_test"
+    id = Column(Integer, primary_key=True, index=True)
+    pinged_at = Column(DateTime, default=datetime.utcnow)
 
 class DBStudent(Base):
     __tablename__ = "students"
