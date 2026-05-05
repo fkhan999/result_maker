@@ -79,7 +79,7 @@ class UPPCLScraper:
 
     def log_msg(self, msg):
         if not self.silent:
-            logging.getLogger("uppcl").info(msg)
+            print(msg, flush=True)
 
     def send_alert(self, msg):
         # Telegram alert
