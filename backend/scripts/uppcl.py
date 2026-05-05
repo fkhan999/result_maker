@@ -8,6 +8,7 @@ import base64
 import os
 import re
 import sys
+import logging
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Util.Padding import pad, unpad
@@ -77,7 +78,8 @@ class UPPCLScraper:
         self.KEY_SIZE = 32
 
     def log_msg(self, msg):
-        if not self.silent: print(msg)
+        if not self.silent:
+            logging.getLogger("uppcl").info(msg)
 
     def send_alert(self, msg):
         # Telegram alert
