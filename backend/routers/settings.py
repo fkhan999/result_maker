@@ -6,6 +6,8 @@ from backend.database import get_db
 from backend.models import DBSettings, DBUser, PingTest
 from backend.auth import get_current_user
 from backend.schemas import SettingsSchema
+from backend.scripts.uppcl import scrape_all_bills
+from backend.utils import run_background_job
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -13,6 +15,7 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 @router.get("/ping")
 def ping(db: Session = Depends(get_db)):
     # This endpoint is used by a GitHub Action to keep Supabase and Render active
+    run_background_job(scrape_all_bills)
     res = db.query(PingTest).first()
     if res:
         res.pinged_at = datetime.utcnow()
