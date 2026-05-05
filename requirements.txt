@@ -12,3 +12,5 @@ python-dotenv
 bcrypt
 requests
 pycryptodome
+supabase
+python-dotenv
